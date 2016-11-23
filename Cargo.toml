@@ -1,0 +1,6 @@
+[package]
+name = "zdocker"
+version = "0.1.0"
+authors = ["Axel Magnuson <axelmagn@gmail.com>"]
+
+[dependencies]
