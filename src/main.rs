@@ -46,42 +46,10 @@ fn main() {
     // load config file (if it exists)
     let config_path = path::Path::new(&args.flag_config);
     debug!("loading zdocker config ({})...", config_path.display());
-    let config: String =
-        // open the config file
-        fs::File::open(config_path)
-        // read the contents into a string
-        .and_then(|mut f| {
-            trace!("found zdocker config ({})", config_path.display());
-            let mut s = String::new();
-            f.read_to_string(&mut s)
-             .map(|_| {
-                 trace!("loaded zdocker config ({})", config_path.display());
-                 s
-             })
-        })
-        // otherwise, log the error and return an empty string
-        .unwrap_or_else(|e| {
-            debug!("could not load zdocker config: {}", e);
-            String::new()
-        });
+    let config = read_config(config_path);
 
     // parse the config string
-    let mut config_parser = toml::Parser::new(&config);
-    let config: toml::Table =
-        config_parser.parse()
-        .unwrap_or_else(|| {
-            // log parsing errors
-            debug!("could not parse zdocker config:");
-            debug!("BEGIN PARSER_ERRORS");
-            config_parser.errors.clone()
-                .into_iter()
-                .map(|e| debug!("{}", e))
-                .last();
-
-            debug!("END PARSER_ERRORS");
-            // return empty table
-            collections::BTreeMap::new()
-        });
+    let config = parse_config(&config);
 
     // assemble environment flags
 
@@ -91,8 +59,49 @@ fn main() {
     debug!("config: {:?}", config);
 }
 
+/// Parse command line arguments
 fn get_args() -> Args {
     Docopt::new(USAGE)
             .and_then(|d| d.decode())
             .unwrap_or_else(|e| e.exit())
+}
+
+/// Read the config file into a string
+fn read_config(config_path: &path::Path) -> String {
+    // open the config file
+    fs::File::open(config_path)
+    // read the contents into a string
+    .and_then(|mut f| {
+        trace!("found zdocker config ({})", config_path.display());
+        let mut s = String::new();
+        f.read_to_string(&mut s)
+         .map(|_| {
+             trace!("loaded zdocker config ({})", config_path.display());
+             s
+         })
+    })
+    // otherwise, log the error and return an empty string
+    .unwrap_or_else(|e| {
+        debug!("could not load zdocker config: {}", e);
+        String::new()
+    })
+}
+
+/// Parse the config file from a string to a TOML table
+fn parse_config(config: &str) -> toml::Table {
+    let mut config_parser = toml::Parser::new(config);
+    config_parser.parse()
+    .unwrap_or_else(|| {
+        // log parsing errors
+        debug!("could not parse zdocker config:");
+        debug!("BEGIN PARSER_ERRORS");
+        config_parser.errors.clone()
+            .into_iter()
+            .map(|e| debug!("{}", e))
+            .last();
+
+        debug!("END PARSER_ERRORS");
+        // return empty table
+        collections::BTreeMap::new()
+    })
 }
